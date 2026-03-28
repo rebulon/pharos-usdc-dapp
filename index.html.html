@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pharos USDC DeFi | Real Smart Contracts on Atlantic Testnet</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap');
+        * { font-family: 'Inter', monospace; }
+        body { background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0f1628 100%); }
+        .glass { background: rgba(10, 14, 32, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(0, 255, 255, 0.2); }
+        .gradient-text { background: linear-gradient(135deg, #06b6d4, #3b82f6); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .glow-hover:hover { box-shadow: 0 0 15px rgba(6, 182, 212, 0.3); transition: all 0.2s; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0f1222; }
+        ::-webkit-scrollbar-thumb { background: #06b6d4; border-radius: 6px; }
+    </style>
+</head>
+<body class="text-gray-200">
+
+<div class="fixed inset-0 pointer-events-none overflow-hidden">
+    <div class="absolute top-20 left-1/4 w-96 h-96 bg-cyan-500 opacity-10 blur-[100px] rounded-full animate-pulse"></div>
+    <div class="absolute bottom-10 right-10 w-80 h-80 bg-blue-600 opacity-10 blur-[100px] rounded-full animate-pulse delay-1000"></div>
+</div>
+
+<header class="sticky top-0 z-50 border-b border-cyan-800/40 glass">
+    <div class="max-w-7xl mx-auto px-5 py-4 flex flex-wrap justify-between items-center gap-3">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-xl font-bold">Φ</div>
+            <div>
+                <h1 class="text-2xl font-bold">PHAROS USDC</h1>
+                <p class="text-[11px] text-cyan-400/60">Atlantic Testnet • Circle CCTP Ready</p>
+            </div>
+        </div>
+        <button id="connectBtn" class="px-5 py-2 rounded-xl font-mono text-sm font-semibold transition-all border border-cyan-500/60 bg-cyan-950/40 text-cyan-300 hover:bg-cyan-900/60">🔌 Connect Wallet</button>
+    </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-5 py-8 relative z-10">
+    <div id="unconnectedView" class="grid md:grid-cols-2 gap-10 items-center py-10">
+        <div>
+            <h2 class="text-4xl md:text-5xl font-bold leading-tight">Real DeFi on <span class="gradient-text">Pharos</span></h2>
+            <p class="text-gray-400 text-lg mt-4">Interact with real USDC smart contracts on Pharos Atlantic Testnet. Every transaction is on-chain.</p>
+            <ul class="mt-8 space-y-3">
+                <li class="flex items-center gap-3">✅ Real USDC transfers</li>
+                <li class="flex items-center gap-3">✅ Staking with 12.5% APR</li>
+                <li class="flex items-center gap-3">✅ DEX Swaps & Liquidity Pool</li>
+                <li class="flex items-center gap-3">✅ CCTP Cross-Chain Bridge</li>
+            </ul>
+        </div>
+        <div class="p-8 glass rounded-2xl border border-cyan-500/20">
+            <h3 class="text-xl font-bold mb-4">Setup</h3>
+            <div class="space-y-4 text-sm text-gray-300">
+                <div><span class="text-cyan-400">1.</span> Deploy contracts via Remix</div>
+                <div><span class="text-cyan-400">2.</span> Paste contract addresses below</div>
+                <div><span class="text-cyan-400">3.</span> Connect MetaMask (Chain 688689)</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="connectedView" class="hidden">
+        <!-- Contract Addresses Panel -->
+        <div class="mb-8 p-6 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+            <p class="text-sm text-yellow-300 mb-4 font-bold">📋 Your Deployed Contract Addresses</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div class="bg-black/40 p-2 rounded"><span class="text-cyan-400">Vault:</span> <span id="vaultAddr" class="text-xs break-all">0x2b1e80D4EdfC9B80D8226943cBdaC2738dB5575e</span></div>
+                <div class="bg-black/40 p-2 rounded"><span class="text-cyan-400">DEX:</span> <span id="dexAddr" class="text-xs break-all">0xc88A22f48EaCe0b559Bb425255E71f24C4dB898A</span></div>
+                <div class="bg-black/40 p-2 rounded"><span class="text-cyan-400">LP Pool:</span> <span id="lpAddr" class="text-xs break-all">0x49d56A5C6b66E5f4f0B77A3A8B8ff220d505c2b4</span></div>
+                <div class="bg-black/40 p-2 rounded"><span class="text-cyan-400">Bridge:</span> <span id="bridgeAddr" class="text-xs break-all">0x7cFEaF0DC20F17fA19DA87D1a05639c7a1010A52</span></div>
+            </div>
+            <button id="reinitContracts" class="mt-4 px-4 py-2 bg-cyan-600/40 border border-cyan-500 rounded-lg text-sm hover:bg-cyan-600/60">🔄 Re-initialize Contracts</button>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div class="p-4 glass rounded-lg border border-cyan-500/20"><p class="text-xs text-cyan-400/70">USDC Balance</p><p id="usdcBalance" class="text-3xl font-bold">$0.00</p></div>
+            <div class="p-4 glass rounded-lg border border-green-500/20"><p class="text-xs text-green-400/70">Network</p><p class="text-lg font-bold">Pharos Atlantic</p><p class="text-xs text-green-400/50">Chain 688689</p></div>
+            <div class="p-4 glass rounded-lg border border-purple-500/20"><p class="text-xs text-purple-400/70">Transactions</p><p id="txCount" class="text-3xl font-bold">0</p></div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex gap-2 mb-8 border-b border-cyan-900/30 overflow-x-auto pb-4">
+            <button data-tab="dashboard" class="tab-btn px-4 py-2 rounded-lg text-sm bg-cyan-500/20 border border-cyan-500 text-cyan-300">Dashboard</button>
+            <button data-tab="transfer" class="tab-btn px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-cyan-300">Transfer</button>
+            <button data-tab="deposit" class="tab-btn px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-cyan-300">Deposit</button>
+            <button data-tab="stake" class="tab-btn px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-cyan-300">Stake</button>
+            <button data-tab="swap" class="tab-btn px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-cyan-300">Swap</button>
+            <button data-tab="liquidity" class="tab-btn px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-cyan-300">Liquidity</button>
+            <button data-tab="bridge" class="tab-btn px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-cyan-300">Bridge</button>
+        </div>
+
+        <!-- Tab Content -->
+        <div id="dashboard" class="tab-content grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 p-6 glass rounded-lg border border-cyan-500/20"><h3 class="text-lg font-bold mb-4">Transaction History</h3><div id="txHistory" class="space-y-3 max-h-96 overflow-y-auto"><p class="text-gray-400 text-sm">No transactions yet.</p></div></div>
+            <div class="p-6 glass rounded-lg border border-blue-500/20"><h3 class="text-lg font-bold mb-4">Network Info</h3><div class="space-y-4 text-sm"><div><p class="text-blue-400">Chain ID</p><p class="font-mono">688689</p></div><div><p class="text-blue-400">USDC Contract</p><p class="font-mono text-xs break-all">0xcfc8330f4bcab529c625d12781b1c19466a9fc8b</p></div></div></div>
+        </div>
+
+        <div id="transfer" class="tab-content hidden max-w-2xl p-6 glass rounded-lg border border-cyan-500/20"><h3 class="text-lg font-bold mb-6">Transfer USDC</h3><div class="space-y-4"><input type="text" id="transferTo" placeholder="Recipient Address (0x...)" class="w-full px-4 py-2 bg-black/40 border border-cyan-500/30 rounded-lg"><input type="number" id="transferAmount" placeholder="Amount (USDC)" class="w-full px-4 py-2 bg-black/40 border border-cyan-500/30 rounded-lg"><button id="doTransfer" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg font-bold">Send USDC</button></div></div>
+
+        <div id="deposit" class="tab-content hidden max-w-2xl p-6 glass rounded-lg border border-cyan-500/20"><h3 class="text-lg font-bold mb-6">Deposit to Vault</h3><div class="space-y-4"><input type="number" id="depositAmount" placeholder="Amount (USDC)" class="w-full px-4 py-2 bg-black/40 border border-cyan-500/30 rounded-lg"><button id="doDeposit" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg font-bold">Deposit</button></div></div>
+
+        <div id="stake" class="tab-content hidden max-w-2xl p-6 glass rounded-lg border border-cyan-500/20"><h3 class="text-lg font-bold mb-6">Stake USDC (12.5% APR)</h3><div class="space-y-4"><input type="number" id="stakeAmount" placeholder="Amount (USDC)" class="w-full px-4 py-2 bg-black/40 border border-cyan-500/30 rounded-lg"><button id="doStake" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg font-bold">Stake</button><button id="doClaimRewards" class="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg font-bold">Claim Rewards</button></div></div>
+
+        <div id="swap" class="tab-content hidden max-w-2xl p-6 glass rounded-lg border border-cyan-500/20"><h3 class="text-lg font-bold mb-6">Swap on DEX</h3><div class="space-y-4"><input type="number" id="swapAmount" placeholder="USDC Amount" class="w-full px-4 py-2 bg-black/40 border border-cyan-500/30 rounded-lg"><button id="doSwap" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg font-bold">Confirm Swap</button></div></div>
+
+        <div id="liquidity" class="tab-content hidden max-w-2xl p-6 glass rounded-lg border border-cyan-500/20"><h3 class="text-lg font-bold mb-6">Add Liquidity</h3><div class="space-y-4"><input type="number" id="liquidityAmount" placeholder="USDC Amount" class="w-full px-4 py-2 bg-black/40 border border-cyan-500/30 rounded-lg"><button id="doAddLiquidity" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg font-bold">Add Liquidity</button></div></div>
+
+        <div id="bridge" class="tab-content hidden max-w-2xl p-6 glass rounded-lg border border-cyan-500/20"><h3 class="text-lg font-bold mb-6">Bridge via CCTP</h3><div class="space-y-4"><input type="number" id="bridgeAmount" placeholder="USDC Amount" class="w-full px-4 py-2 bg-black/40 border border-cyan-500/30 rounded-lg"><select id="bridgeChain" class="w-full px-4 py-2 bg-black/40 border border-cyan-500/30 rounded-lg"><option value="0">Ethereum (1)</option><option value="1">Arbitrum (42161)</option><option value="2">Base (8453)</option><option value="3">Polygon (137)</option></select><button id="doBridge" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-lg font-bold">Bridge USDC</button></div></div>
+    </div>
+</main>
+
+<footer class="border-t border-cyan-900/30 mt-16 py-8 px-6 text-center text-xs text-gray-500">
+    <p>Pharos Atlantic Testnet • Circle CCTP Integration • ethers.js v6</p>
+    <p class="mt-2">Ready for $10M Incubator Program 🚀</p>
+</footer>
+
+<script>
+    // ==================== CONFIGURATION ====================
+    const PHAROS_CONFIG = {
+        chainId: 688689,
+        chainName: 'Atlantic Testnet',
+        rpcUrl: 'https://atlantic.dplabs-internal.com',
+        explorerUrl: 'https://atlantic.pharosscan.xyz',
+        usdc: '0xcfc8330f4bcab529c625d12781b1c19466a9fc8b'
+    };
+
+    // Contract addresses (YOUR DEPLOYED ADDRESSES)
+    const CONTRACT_ADDRESSES = {
+        vault: '0x2b1e80D4EdfC9B80D8226943cBdaC2738dB5575e',
+        dex: '0xc88A22f48EaCe0b559Bb425255E71f24C4dB898A',
+        lp: '0x49d56A5C6b66E5f4f0B77A3A8B8ff220d505c2b4',
+        bridge: '0x7cFEaF0DC20F17fA19DA87D1a05639c7a1010A52'
+    };
+
+    // ABIs
+    const USDC_ABI = [
+        'function balanceOf(address owner) view returns (uint256)',
+        'function transfer(address to, uint256 amount) returns (bool)',
+        'function approve(address spender, uint256 amount) returns (bool)',
+        'function allowance(address owner, address spender) view returns (uint256)'
+    ];
+
+    const VAULT_ABI = [
+        'function deposit(uint256 amount) external',
+        'function stake(uint256 amount) external',
+        'function claimRewards() external'
+    ];
+
+    const DEX_ABI = [
+        'function swapUSDCForToken(address token, uint256 usdcAmount) external returns (uint256)'
+    ];
+
+    const LP_ABI = [
+        'function addLiquidity(uint256 usdcAmount) external returns (uint256)'
+    ];
+
+    const BRIDGE_ABI = [
+        'function bridgeUSDC(uint256 amount, uint256 targetChain) external returns (string memory)'
+    ];
+
+    // State
+    let provider, signer, account;
+    let usdcContract, vaultContract, dexContract, lpContract, bridgeContract;
+    let txHistory = [];
+
+    // DOM Elements
+    const connectBtn = document.getElementById('connectBtn');
+    const unconnectedView = document.getElementById('unconnectedView');
+    const connectedView = document.getElementById('connectedView');
+    const usdcBalanceEl = document.getElementById('usdcBalance');
+    const txCountEl = document.getElementById('txCount');
+    const txHistoryDiv = document.getElementById('txHistory');
+    const reinitBtn = document.getElementById('reinitContracts');
+
+    // Notification
+    function showNotification(msg, type = 'success') {
+        const notif = document.createElement('div');
+        notif.className = `fixed top-20 right-6 px-6 py-3 rounded-lg border backdrop-blur-md z-50 ${
+            type === 'error' ? 'border-red-500/50 bg-red-500/10 text-red-300' :
+            type === 'info' ? 'border-blue-500/50 bg-blue-500/10 text-blue-300' :
+            'border-green-500/50 bg-green-500/10 text-green-300'
+        }`;
+        notif.innerText = msg;
+        document.body.appendChild(notif);
+        setTimeout(() => notif.remove(), 5000);
+    }
+
+    // Initialize contracts
+    async function initContracts() {
+        if (!signer) return;
+        
+        try {
+            usdcContract = new ethers.Contract(PHAROS_CONFIG.usdc, USDC_ABI, signer);
+            console.log('✅ USDC contract initialized');
+            
+            if (CONTRACT_ADDRESSES.vault) {
+                vaultContract = new ethers.Contract(CONTRACT_ADDRESSES.vault, VAULT_ABI, signer);
+                console.log('✅ Vault contract initialized');
+            }
+            if (CONTRACT_ADDRESSES.dex) {
+                dexContract = new ethers.Contract(CONTRACT_ADDRESSES.dex, DEX_ABI, signer);
+                console.log('✅ DEX contract initialized');
+            }
+            if (CONTRACT_ADDRESSES.lp) {
+                lpContract = new ethers.Contract(CONTRACT_ADDRESSES.lp, LP_ABI, signer);
+                console.log('✅ LP contract initialized');
+            }
+            if (CONTRACT_ADDRESSES.bridge) {
+                bridgeContract = new ethers.Contract(CONTRACT_ADDRESSES.bridge, BRIDGE_ABI, signer);
+                console.log('✅ Bridge contract initialized');
+            }
+            
+            await updateBalance();
+            showNotification('✅ All contracts initialized', 'success');
+        } catch (err) {
+            console.error('Init error:', err);
+            showNotification('Contract initialization error: ' + err.message, 'error');
+        }
+    }
+
+    // Update USDC Balance
+    async function updateBalance() {
+        if (!usdcContract || !account) return;
+        try {
+            const balance = await usdcContract.balanceOf(account);
+            usdcBalanceEl.innerText = `$${ethers.formatUnits(balance, 6)}`;
+        } catch (err) {
+            console.error('Balance error:', err);
+        }
+    }
+
+    // Add transaction to history
+    function addTransaction(type, amount, hash) {
+        const tx = {
+            type, amount, hash,
+            timestamp: new Date().toLocaleTimeString(),
+            explorerUrl: `${PHAROS_CONFIG.explorerUrl}/tx/${hash}`
+        };
+        txHistory = [tx, ...txHistory].slice(0, 10);
+        txCountEl.innerText = txHistory.length;
+        
+        txHistoryDiv.innerHTML = txHistory.map(t => `
+            <div class="flex justify-between items-center p-3 bg-black/30 rounded border border-cyan-900/30 text-sm hover:border-cyan-500/50 transition-all cursor-pointer"
+                 onclick="window.open('${t.explorerUrl}', '_blank')">
+                <div><p class="font-mono text-cyan-300 uppercase text-xs">${t.type}</p><p class="text-xs text-gray-400">${t.timestamp}</p></div>
+                <div class="text-right"><p class="font-bold text-sm">${t.amount} USDC</p><p class="text-xs text-green-400">✓ confirmed</p></div>
+            </div>
+        `).join('');
+    }
+
+    // Handle approve + action
+    async function approveAndExecute(spender, amount, action, actionName) {
+        if (!usdcContract) throw new Error('USDC contract not loaded');
+        const allowance = await usdcContract.allowance(account, spender);
+        if (allowance < amount) {
+            showNotification(`Approving USDC for ${actionName}...`, 'info');
+            const approveTx = await usdcContract.approve(spender, amount);
+            await approveTx.wait();
+        }
+        const tx = await action();
+        await tx.wait();
+        return tx;
+    }
+
+    // Transfer
+    async function handleTransfer() {
+        const to = document.getElementById('transferTo').value;
+        const amount = document.getElementById('transferAmount').value;
+        if (!to || !amount) { showNotification('Please fill all fields', 'error'); return; }
+        
+        try {
+            const amountWei = ethers.parseUnits(amount, 6);
+            showNotification('Sending USDC...', 'info');
+            const tx = await usdcContract.transfer(to, amountWei);
+            await tx.wait();
+            addTransaction('transfer', amount, tx.hash);
+            document.getElementById('transferTo').value = '';
+            document.getElementById('transferAmount').value = '';
+            await updateBalance();
+            showNotification(`✅ Transferred ${amount} USDC`);
+        } catch (err) {
+            showNotification(err.message || 'Transfer failed', 'error');
+        }
+    }
+
+    // Deposit
+    async function handleDeposit() {
+        const amount = document.getElementById('depositAmount').value;
+        if (!amount) { showNotification('Please enter amount', 'error'); return; }
+        if (!vaultContract) { showNotification('Vault contract not initialized', 'error'); return; }
+        
+        try {
+            const amountWei = ethers.parseUnits(amount, 6);
+            await approveAndExecute(CONTRACT_ADDRESSES.vault, amountWei, 
+                () => vaultContract.deposit(amountWei), 'deposit');
+            addTransaction('deposit', amount, 'pending');
+            document.getElementById('depositAmount').value = '';
+            await updateBalance();
+            showNotification(`✅ Deposited ${amount} USDC`);
+        } catch (err) {
+            showNotification(err.message || 'Deposit failed', 'error');
+        }
+    }
+
+    // Stake
+    async function handleStake() {
+        const amount = document.getElementById('stakeAmount').value;
+        if (!amount) { showNotification('Please enter amount', 'error'); return; }
+        if (!vaultContract) { showNotification('Vault contract not initialized', 'error'); return; }
+        
+        try {
+            const amountWei = ethers.parseUnits(amount, 6);
+            await approveAndExecute(CONTRACT_ADDRESSES.vault, amountWei,
+                () => vaultContract.stake(amountWei), 'stake');
+            addTransaction('stake', amount, 'pending');
+            document.getElementById('stakeAmount').value = '';
+            showNotification(`✅ Staked ${amount} USDC (12.5% APR)`);
+        } catch (err) {
+            showNotification(err.message || 'Staking failed', 'error');
+        }
+    }
+
+    // Claim Rewards
+    async function handleClaimRewards() {
+        if (!vaultContract) { showNotification('Vault contract not initialized', 'error'); return; }
+        try {
+            showNotification('Claiming rewards...', 'info');
+            const tx = await vaultContract.claimRewards();
+            await tx.wait();
+            addTransaction('claimRewards', '0', tx.hash);
+            showNotification('✅ Rewards claimed successfully');
+        } catch (err) {
+            showNotification(err.message || 'Claim failed', 'error');
+        }
+    }
+
+    // Swap
+    async function handleSwap() {
+        const amount = document.getElementById('swapAmount').value;
+        if (!amount) { showNotification('Please enter amount', 'error'); return; }
+        if (!dexContract) { showNotification('DEX contract not initialized', 'error'); return; }
+        
+        try {
+            const amountWei = ethers.parseUnits(amount, 6);
+            await approveAndExecute(CONTRACT_ADDRESSES.dex, amountWei,
+                () => dexContract.swapUSDCForToken(ethers.ZeroAddress, amountWei), 'swap');
+            addTransaction('swap', amount, 'pending');
+            document.getElementById('swapAmount').value = '';
+            showNotification(`✅ Swapped ${amount} USDC`);
+        } catch (err) {
+            showNotification(err.message || 'Swap failed', 'error');
+        }
+    }
+
+    // Add Liquidity
+    async function handleAddLiquidity() {
+        const amount = document.getElementById('liquidityAmount').value;
+        if (!amount) { showNotification('Please enter amount', 'error'); return; }
+        if (!lpContract) { showNotification('LP contract not initialized', 'error'); return; }
+        
+        try {
+            const amountWei = ethers.parseUnits(amount, 6);
+            await approveAndExecute(CONTRACT_ADDRESSES.lp, amountWei,
+                () => lpContract.addLiquidity(amountWei), 'liquidity');
+            addTransaction('liquidity', amount, 'pending');
+            document.getElementById('liquidityAmount').value = '';
+            showNotification(`✅ Added ${amount} USDC to liquidity pool`);
+        } catch (err) {
+            showNotification(err.message || 'Add liquidity failed', 'error');
+        }
+    }
+
+    // Bridge
+    async function handleBridge() {
+        const amount = document.getElementById('bridgeAmount').value;
+        const chain = document.getElementById('bridgeChain').value;
+        if (!amount) { showNotification('Please enter amount', 'error'); return; }
+        if (!bridgeContract) { showNotification('Bridge contract not initialized', 'error'); return; }
+        
+        try {
+            const amountWei = ethers.parseUnits(amount, 6);
+            await approveAndExecute(CONTRACT_ADDRESSES.bridge, amountWei,
+                () => bridgeContract.bridgeUSDC(amountWei, parseInt(chain)), 'bridge');
+            addTransaction('bridge', amount, 'pending');
+            document.getElementById('bridgeAmount').value = '';
+            showNotification(`✅ Bridged ${amount} USDC via CCTP`);
+        } catch (err) {
+            showNotification(err.message || 'Bridge failed', 'error');
+        }
+    }
+
+    // Connect Wallet
+    async function connectWallet() {
+        if (!window.ethereum) {
+            showNotification('Please install MetaMask', 'error');
+            return;
+        }
+        
+        try {
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            const chainId = parseInt(await window.ethereum.request({ method: 'eth_chainId' }), 16);
+            
+            if (chainId !== PHAROS_CONFIG.chainId) {
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: `0x${PHAROS_CONFIG.chainId.toString(16)}` }]
+                    });
+                } catch (err) {
+                    if (err.code === 4902) {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{
+                                chainId: `0x${PHAROS_CONFIG.chainId.toString(16)}`,
+                                chainName: PHAROS_CONFIG.chainName,
+                                rpcUrls: [PHAROS_CONFIG.rpcUrl],
+                                nativeCurrency: { name: 'PHO', symbol: 'PHO', decimals: 18 },
+                                blockExplorerUrls: [PHAROS_CONFIG.explorerUrl]
+                            }]
+                        });
+                    }
+                }
+            }
+            
+            provider = new ethers.BrowserProvider(window.ethereum);
+            signer = await provider.getSigner();
+            account = accounts[0];
+            
+            await initContracts();
+            
+            unconnectedView.classList.add('hidden');
+            connectedView.classList.remove('hidden');
+            connectBtn.innerText = `${account.slice(0, 6)}...${account.slice(-4)}`;
+            connectBtn.disabled = true;
+            
+            showNotification(`✅ Connected: ${account.slice(0, 10)}...`);
+        } catch (err) {
+            showNotification(err.message || 'Connection failed', 'error');
+        }
+    }
+
+    // Tab switching
+    function setupTabs() {
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.dataset.tab;
+                document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+                document.getElementById(tabId).classList.remove('hidden');
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.classList.remove('bg-cyan-500/20', 'border', 'border-cyan-500', 'text-cyan-300');
+                    b.classList.add('text-gray-400');
+                });
+                btn.classList.add('bg-cyan-500/20', 'border', 'border-cyan-500', 'text-cyan-300');
+                btn.classList.remove('text-gray-400');
+            });
+        });
+    }
+
+    // Event Listeners
+    connectBtn.addEventListener('click', connectWallet);
+    reinitBtn.addEventListener('click', initContracts);
+    document.getElementById('doTransfer')?.addEventListener('click', handleTransfer);
+    document.getElementById('doDeposit')?.addEventListener('click', handleDeposit);
+    document.getElementById('doStake')?.addEventListener('click', handleStake);
+    document.getElementById('doClaimRewards')?.addEventListener('click', handleClaimRewards);
+    document.getElementById('doSwap')?.addEventListener('click', handleSwap);
+    document.getElementById('doAddLiquidity')?.addEventListener('click', handleAddLiquidity);
+    document.getElementById('doBridge')?.addEventListener('click', handleBridge);
+    
+    setupTabs();
+    
+    // Display contract addresses
+    document.getElementById('vaultAddr').innerText = CONTRACT_ADDRESSES.vault;
+    document.getElementById('dexAddr').innerText = CONTRACT_ADDRESSES.dex;
+    document.getElementById('lpAddr').innerText = CONTRACT_ADDRESSES.lp;
+    document.getElementById('bridgeAddr').innerText = CONTRACT_ADDRESSES.bridge;
+</script>
+</body>
+</html>
